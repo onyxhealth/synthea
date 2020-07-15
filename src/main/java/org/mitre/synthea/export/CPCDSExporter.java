@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -20,7 +22,6 @@ import java.util.UUID;
 import org.mitre.synthea.helpers.Config;
 import org.mitre.synthea.world.agents.Payer;
 import org.mitre.synthea.world.agents.Person;
-import org.mitre.synthea.world.concepts.HealthRecord.CarePlan;
 import org.mitre.synthea.world.concepts.HealthRecord.Code;
 import org.mitre.synthea.world.concepts.HealthRecord.Device;
 import org.mitre.synthea.world.concepts.HealthRecord.Encounter;
@@ -75,11 +76,12 @@ public class CPCDSExporter {
   private static final String NEWLINE = System.lineSeparator();
 
   /**
-   * Trackers for Practitioner and Hospital outputs.
+   * Trackers for outputs.
    */
   public ArrayList<String> exportedPractitioners = new ArrayList<String>();
   public ArrayList<String> exportedHospitals = new ArrayList<String>();
   public Map<String, String> overwrittenNPIs = new HashMap<String, String>();
+  public Map<String, Map<String, String>> coverageLookup = new HashMap<String, Map<String, String>>();
 
   /**
    * Constructor for the CSVExporter - initialize the 9 specified files and store
@@ -169,8 +171,12 @@ public class CPCDSExporter {
         + "Line amount paid by patient,Drug cost,Line payment amount,Line amount paid to provider,"
         + "Line patient deductible,Line primary payer paid amount,Line coinsurance amount,"
         + "Line submitted amount,Line allowed amount,Line member liability,Line copay amount,"
-        + "Line discount amount,Diagnosis code,Diagnosis description,Present on admission,"
-        + "Diagnosis code type,Diagnosis type,Is E code,Procedure code,Procedure description,"
+        + "Line discount amount,Diagnosis code - 1,Diagnosis description - 1,Present on admission - 1,"
+        + "Diagnosis code type - 1,Diagnosis type - 1,Is E code - 1,Diagnosis code - 2,Diagnosis description - 2,Present on admission - 2,"
+        + "Diagnosis code type - 2,Diagnosis type - 2,Is E code - 2,Diagnosis code - 3,Diagnosis description - 3,Present on admission - 3,"
+        + "Diagnosis code type - 3,Diagnosis type - 3,Is E code - 3,Diagnosis code - 4,Diagnosis description - 4,Present on admission - 4,"
+        + "Diagnosis code type - 4,Diagnosis type - 4,Is E code - 4,Diagnosis code - 5,Diagnosis description - 5,Present on admission - 5,"
+        + "Diagnosis code type - 5,Diagnosis type - 5,Is E code - 5,Procedure code,Procedure description,"
         + "Procedure date,Procedure code type,Procedure type,Modifier Code-1,Modifier Code-2,"
         + "Modifier Code-3,Modifier Code-4";
 
@@ -212,7 +218,7 @@ public class CPCDSExporter {
    * @throws IOException if any IO error occurs
    */
   public void export(Person person, long time) throws IOException {
-    String personID = patient(person, time);
+    
     String payerId = "";
     String payerName = "";
     String type = COVERAGE_TYPES[(int) randomLongWithBounds(0, COVERAGE_TYPES.length - 1)];
@@ -222,37 +228,47 @@ public class CPCDSExporter {
     int planSelect = (int) randomLongWithBounds(0, PLAN_NAMES.length - 1);
     String planName = PLAN_NAMES[planSelect];
     String planId = PLAN_IDS[planSelect];
-    long start = 999999999;
+    long start = 999999999999999999L;
     long end = 0;
+    Calendar date = Calendar.getInstance();
+    String minimumYear = String.valueOf(date.get(Calendar.YEAR) -  Integer.parseInt(Config.get("exporter.years_of_history", "5")));
 
+    //person filter
+    Boolean continueBoolean = false;
     for (Encounter encounter : person.record.encounters) {
-      String encounterID = UUID.randomUUID().toString();
-      UUID medRecordNumber = UUID.randomUUID();
-      CPCDSAttributes encounterAttributes = new CPCDSAttributes(encounter);
+      int yearOfEncounter = Integer.parseInt(dateFromTimestamp(encounter.start).substring(0, 4));
+      if (yearOfEncounter >= Integer.parseInt(minimumYear)) {
+        continueBoolean = true;
+      }
+    }
 
-      if (Boolean.parseBoolean(Config.get("exporter.cpcds.single_payer"))) {
-        payerId = clean(Config.get("exporter.cpcds.single_payer.id", "b1c428d6-4f07-31e0-90f0-68ffa6ff8c76"));
-        payerName = clean(Config.get("exporter.cpcds.single_payer.name", "Diamond Health"));
-      } else {
-        payerId = encounter.claim.payer.uuid.toString();
-        payerName = encounter.claim.payer.getName();
-      }
+    if (continueBoolean) {
+      String personID = patient(person, time);
+      for (Encounter encounter : person.record.encounters) {
+        int yearOfEncounter = Integer.parseInt(dateFromTimestamp(encounter.start).substring(0, 4));
+        if (yearOfEncounter < Integer.parseInt(minimumYear)) {
+          continue;
+        }
+        String encounterID = UUID.randomUUID().toString();
+        UUID medRecordNumber = UUID.randomUUID();
+        CPCDSAttributes encounterAttributes = new CPCDSAttributes(encounter);
 
-      for (CarePlan careplan : encounter.careplans) {
-        if (careplan.start < start) {
-          start = careplan.start;
+        if (Boolean.parseBoolean(Config.get("exporter.cpcds.single_payer"))) {
+          payerId = clean(Config.get("exporter.cpcds.single_payer.id", "b1c428d6-4f07-31e0-90f0-68ffa6ff8c76"));
+          payerName = clean(Config.get("exporter.cpcds.single_payer.name", "Diamond Health"));
+        } else {
+          payerId = encounter.claim.payer.uuid.toString();
+          payerName = encounter.claim.payer.getName();
         }
-        if (careplan.stop > end) {
-          end = careplan.stop;
-        }
+        
+        start = encounter.start;
+        end = encounter.stop;
+
+        String coverageID = coverage(personID, start, end, payerId, type, groupId, groupName, planName, planId);
+        claim(encounter, personID, encounterID, medRecordNumber, encounterAttributes, payerId, coverageID);
+        organization(encounter, encounterAttributes, payerName);
+        payer(encounterAttributes);
       }
-      if (start == 999999999999999999L) {
-        start = end;
-      }
-      String coverageID = coverage(personID, start, end, payerId, type, groupId, groupName, planName, planId);
-      claim(encounter, personID, encounterID, medRecordNumber, encounterAttributes, payerId, coverageID);
-      organization(encounter, encounterAttributes, payerName);
-      payer(encounterAttributes);
     }
 
     patients.flush();
@@ -323,36 +339,79 @@ public class CPCDSExporter {
   private String coverage(String personID, long start, long stop, String payerId, String type, UUID groupId,
       String groupName, String name, String planId) throws IOException {
 
-    StringBuilder s = new StringBuilder();
+    String year = dateFromTimestamp(start).substring(0, 4);
+    
     String coverageID = UUID.randomUUID().toString();
-    s.append(coverageID).append(','); // Coverage id
-    s.append(personID).append(','); // Member id
-    s.append(personID).append(','); // Subscriber id
-    s.append('0').append(','); // Dependent number
-    s.append(type).append(','); // Coverage type
-
-    // Coverage status
-    if (stop != 0L) {
-      s.append("inactive").append(',');
-    } else {
-      s.append("active").append(',');
+    Map<String, String> personCoverage = coverageLookup.get(personID);
+    if (personCoverage != null) {
+      if (personCoverage.get(year) != null) {
+        coverageID = personCoverage.get(year);
+      }
+      else {
+        personCoverage.put(year, coverageID);
+        StringBuilder s = new StringBuilder();
+        s.append(coverageID).append(','); // Coverage id
+        s.append(personID).append(','); // Member id
+        s.append(personID).append(','); // Subscriber id
+        s.append('0').append(','); // Dependent number
+        s.append(type).append(','); // Coverage type
+    
+        // Coverage status
+        if (year != "2020") {
+          s.append("inactive").append(',');
+        } else {
+          s.append("active").append(',');
+        }
+    
+        s.append(year + "-01-01").append(','); // Start date
+        s.append(year + "-12-31").append(','); // End date
+        
+        s.append(groupId).append(','); // Group id
+        s.append(groupName).append(','); // Group name
+        s.append(planId).append(','); // Plan identifier
+        s.append(name).append(','); // Plan name
+        s.append(payerId).append(','); // Payer identifier
+        s.append(payerId).append(','); // Payer primary identifier
+        s.append("self"); // Relationship to subscriber
+        s.append(NEWLINE);
+        write(s.toString(), coverages);
+      }
     }
+    else {
+      personCoverage = new HashMap<String, String>();
+      personCoverage.put(year, coverageID);
+      coverageLookup.put(personID, personCoverage);
 
-    s.append(dateFromTimestamp(start)).append(','); // Start date
-    if (stop != 0L) {
-      s.append(dateFromTimestamp(stop)); // End date
+      StringBuilder s = new StringBuilder();
+      s.append(coverageID).append(','); // Coverage id
+      s.append(personID).append(','); // Member id
+      s.append(personID).append(','); // Subscriber id
+      s.append('0').append(','); // Dependent number
+      s.append(type).append(','); // Coverage type
+  
+      // Coverage status
+      if (year != "2020") {
+        s.append("inactive").append(',');
+      } else {
+        s.append("active").append(',');
+      }
+  
+      s.append(year + "-01-01").append(','); // Start date
+      if (year != "2020") {
+        s.append(year + "-12-31"); // End date
+      }
+  
+      s.append(',');
+      s.append(groupId).append(','); // Group id
+      s.append(groupName).append(','); // Group name
+      s.append(planId).append(','); // Plan identifier
+      s.append(name).append(','); // Plan name
+      s.append(payerId).append(','); // Payer identifier
+      s.append(payerId).append(','); // Payer primary identifier
+      s.append("self"); // Relationship to subscriber
+      s.append(NEWLINE);
+      write(s.toString(), coverages);
     }
-
-    s.append(',');
-    s.append(groupId).append(','); // Group id
-    s.append(groupName).append(','); // Group name
-    s.append(planId).append(','); // Plan identifier
-    s.append(name).append(','); // Plan name
-    s.append(payerId).append(','); // Payer identifier
-    s.append(payerId).append(','); // Payer primary identifier
-    s.append("self"); // Relationship to subscriber
-    s.append(NEWLINE);
-    write(s.toString(), coverages);
     return coverageID;
   }
 
@@ -377,13 +436,21 @@ public class CPCDSExporter {
 
     while (i <= attributes.getLength()) {
       // admin
+      String adminStart = "";
+      String adminEnd = "";
+
+      if (attributes.getClaimType() == "inpatient-facility") {
+        adminStart = dateFromTimestamp(encounter.start);
+        adminEnd = dateFromTimestamp(encounter.stop);
+      }
+
       String billType = attributes.getBillTypeCode();
       String[] adminSection = { String.valueOf(dateFromTimestamp(encounter.start)), // Claim service start date
           String.valueOf(dateFromTimestamp(encounter.stop)), // Claim service end date
           String.valueOf(dateFromTimestamp(encounter.stop)), // Claim paid date
           String.valueOf(dateFromTimestamp(encounter.start)), // Claim received date
-          String.valueOf(dateFromTimestamp(encounter.start)), // Member admission date
-          String.valueOf(dateFromTimestamp(encounter.stop)), // Member discharge date
+          String.valueOf(adminStart), // Member admission date
+          String.valueOf(adminEnd), // Member discharge date
           personID.toString(), // Patient account number
           medRecordNumber.toString(), // Medical record nuimber
           encounterID, // Claim unique identifier
@@ -401,7 +468,7 @@ public class CPCDSExporter {
           attributes.getDenialCode(), // Claim payment denial code
           coverageID, // Claim primary payer identifier
           attributes.getPayeeType(), // Claim payee type code
-          personID, // Claim payee
+          attributes.getNpiProvider(), // Claim payee
           attributes.getPaymentType(), // Claim payment status code
           coverageID // Claim payer identifier
       };
@@ -494,79 +561,56 @@ public class CPCDSExporter {
       // Code-2,Modifier Code-3,Modifier Code-4
 
       // diagnosis
+      StringBuilder diagnosis = new StringBuilder();
+      int diagnosisCount = 0;
+
       for (Entry condition : encounter.conditions) {
-        StringBuilder cond = new StringBuilder();
-        String presentOnAdmission;
+        if (diagnosisCount < 5) {
+          StringBuilder cond = new StringBuilder();
+          String presentOnAdmission;
 
-        String[] poaCodes = { "Y", "N", "U", "W" };
-        presentOnAdmission = poaCodes[(int) randomLongWithBounds(0, 3)];
-        cond.append(adminString);
-        cond.append(pharmacyEMPTY);
-        cond.append(providerString);
-        cond.append(totalsString);
-
-        cond.append(dateFromTimestamp(condition.start)).append(','); // Service (from) date
-        cond.append(i).append(','); // Line number
-        cond.append(dateFromTimestamp(condition.stop)).append(','); // Service to date
-        cond.append("").append(','); // Type of service
-        cond.append(attributes.getPlaceOfService()).append(','); // Place of service code
-        cond.append(attributes.getRevenueCenterCode()).append(','); // Revenue center code
-        cond.append("").append(','); // Allowed number of units
-        cond.append("").append(','); // Number of units
-        cond.append("").append(','); // National drug code
-        cond.append("").append(','); // Compound code
-        cond.append("").append(','); // Quantity dispensed
-        cond.append("").append(','); // Quantity qualifier code
-        cond.append(attributes.getBenefitPaymentStatus()).append(','); // Line benefit payment status
-        cond.append(attributes.getDenialCode()).append(','); // Line payment denial code
-
-        BigDecimal cost = condition.getCost();
-
-        cond.append(0.00).append(','); // Line disallowed amount
-        cond.append(0.00).append(','); // Line member reimbursement
-        cond.append(0.00).append(','); // Line amount paid by patient
-        cond.append("").append(','); // Drug cost
-        cond.append(cost).append(','); // Line payment amount
-        cond.append(cost).append(','); // Line amount paid to provider
-        cond.append(encounter.claim.person.getHealthcareCoverage()).append(','); // Line patient deductible
-        cond.append(cost).append(','); // Line primary payer paid amount
-        cond.append(0.00).append(','); // Line coinsurance amount
-        cond.append(cost).append(','); // Line submitted amount
-        cond.append(cost).append(','); // Line allowed amount
-        cond.append(0.00).append(','); // Line member liability
-        cond.append(0.00).append(','); // Line copay amount
-        cond.append(0.00).append(','); // Line discount amount
-
-        Code coding = condition.codes.get(0);
-        String diagnosisCode = "SNOMED";
-        String diagnosisType = "principal";
-
-        cond.append(coding.code).append(','); // Diagnosis code
-        cond.append(clean(coding.display)).append(','); // Diagnosis description
-        cond.append(presentOnAdmission).append(','); // Present on admission
-        cond.append(diagnosisCode).append(','); // Diagnosis code type
-        cond.append(diagnosisType).append(','); // Diagnosis type
-        cond.append("").append(','); // Is E code
-
-        cond.append(procedureEMPTY).append(NEWLINE);
-        s.append(cond.toString());
-        i++;
+          String[] poaCodes = { "Y", "N", "U", "W" };
+          presentOnAdmission = poaCodes[(int) randomLongWithBounds(0, 3)];
+          Code coding = condition.codes.get(0);
+          String diagnosisCode = "SNOMED";
+          String diagnosisType = "";
+          if (diagnosisCount == 0) {
+            diagnosisType = "principal";
+          }
+          else {
+            if (presentOnAdmission == "Y") {
+              diagnosisType = "admitting";
+            }
+            else {
+              diagnosisType = "clinical";
+            }
+          }
+          cond.append(coding.code).append(','); // Diagnosis code
+          cond.append(clean(coding.display)).append(','); // Diagnosis description
+          cond.append(presentOnAdmission).append(','); // Present on admission
+          cond.append(diagnosisCode).append(','); // Diagnosis code type
+          cond.append(diagnosisType).append(','); // Diagnosis type
+          cond.append("").append(','); // Is E code
+          diagnosis.append(cond);
+          diagnosisCount += 1;
+        }
       }
+      for (int l = diagnosisCount; l <= 4; l++) {
+        diagnosis.append(",,,,,,");
+      }
+
+      String diagnosisString = diagnosis.toString();
+
       // procedures
       int k = 0;
       for (Procedure procedure : encounter.procedures) {
-        String presentOnAdmission;
-        String diagnosisCode = "SNOMED";
-        String diagnosisType = "principal";
+        String procedureCodingCode = "SNOMED";
         String procedureType;
         if (k == 0) {
           procedureType = "primary";
         } else {
           procedureType = "secondary";
         }
-
-        String[] poaCodes = { "Y", "N", "U", "W" };
-        presentOnAdmission = poaCodes[(int) randomLongWithBounds(0, 3)];
 
         StringBuilder proc = new StringBuilder();
         proc.append(adminString);
@@ -612,28 +656,13 @@ public class CPCDSExporter {
         proc.append(0.00).append(',');
         proc.append(0.00).append(',');
 
-        if (procedure.reasons.size() != 0) {
-          Code reasons = procedure.reasons.get(0);
-          proc.append(reasons.code).append(',');
-          proc.append(clean(reasons.display)).append(',');
-          proc.append(presentOnAdmission).append(',');
-          proc.append(diagnosisCode).append(',');
-          proc.append(diagnosisType).append(',');
-        } else {
-          proc.append("").append(',');
-          proc.append("").append(',');
-          proc.append("").append(',');
-          proc.append("").append(',');
-          proc.append("").append(',');
-        }
-
-        proc.append("").append(',');
+        proc.append(diagnosisString);
 
         Code procedureCode = procedure.codes.get(0);
         proc.append(procedureCode.code).append(',');
         proc.append(clean(procedureCode.display)).append(',');
         proc.append(dateFromTimestamp(procedure.start)).append(',');
-        proc.append(diagnosisCode).append(',');
+        proc.append(procedureCodingCode).append(',');
         proc.append(procedureType).append(',');
         proc.append("").append(',');
         proc.append("").append(',');
@@ -647,12 +676,6 @@ public class CPCDSExporter {
       // pharmacy
       for (Medication medication : encounter.medications) {
         StringBuilder med = new StringBuilder();
-        String presentOnAdmission;
-        String diagnosisCode = "SNOMED";
-        String diagnosisType = "principal";
-
-        String[] poaCodes = { "Y", "N", "U", "W" };
-        presentOnAdmission = poaCodes[(int) randomLongWithBounds(0, 3)];
 
         String[] brandGenericList = { "b", "g" };
         String brandGenericCode = brandGenericList[(int) randomLongWithBounds(0, 1)];
@@ -784,22 +807,7 @@ public class CPCDSExporter {
         med.append(0.00).append(',');
         med.append(0.00).append(',');
 
-        if (medication.reasons.size() != 0) {
-          Code reasons = medication.reasons.get(0);
-          med.append(reasons.code).append(',');
-          med.append(clean(reasons.display)).append(',');
-          med.append(presentOnAdmission).append(',');
-          med.append(diagnosisCode).append(',');
-          med.append(diagnosisType).append(',');
-        } else {
-          med.append("").append(',');
-          med.append("").append(',');
-          med.append("").append(',');
-          med.append("").append(',');
-          med.append("").append(',');
-        }
-
-        med.append("").append(',');
+        med.append(diagnosisString);
         med.append(procedureEMPTY).append(NEWLINE);
 
         s.append(med.toString());
@@ -852,13 +860,7 @@ public class CPCDSExporter {
         dev.append(0.00).append(',');
         dev.append(0.00).append(',');
 
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-
-        dev.append("").append(',');
+        dev.append(diagnosisString);
 
         String diagnosisCode = "SNOMED";
         String deviceType = "";
@@ -1036,7 +1038,7 @@ public class CPCDSExporter {
     private final String discharge = "home";
     private final String denialCode = "";
     private String benefitPaymentStatus;
-    private final String payeeType = "subscriber";
+    private final String payeeType = "practitioner";
     private final String paymentType = "complete";
     private String serviceSiteNPI;
     private Integer length;
@@ -1104,8 +1106,7 @@ public class CPCDSExporter {
       setBenefitPaymentStatus(statuses[(int) randomLongWithBounds(0, 1)]);
 
       setServiceSiteNPI(hospitalNPI);
-      setLength(encounter.medications.size() + encounter.procedures.size() + encounter.conditions.size()
-          + encounter.devices.size());
+      setLength(encounter.medications.size() + encounter.procedures.size() + encounter.devices.size());
 
       if (networkStatus == "out") {
         setPlaceOfService("19");
@@ -1140,8 +1141,9 @@ public class CPCDSExporter {
 
       Payer payer = encounter.claim.payer;
       Map<String, Object> attributes = payer.getAttributes();
-      setPayerId("112864302278");
-      setPayerName("RUBY HEALTH");
+      
+      setPayerId("b1c428d6-4f07-31e0-90f0-68ffa6ff8c76");
+      setPayerName("DIAMOND HEALTH");
       setPayerAddress("7428 Main St");
       setPayerCity("Richmond");
       setPayerState("VA");
