@@ -640,8 +640,8 @@ public class CPCDSExporter {
 
         StringBuilder proc = new StringBuilder();
         proc.append(adminString);
-        proc.append(",").append(",").append(",").append(",").append(",").append(",");
-        proc.append("01,").append(attributes.getResidence()).append(',');
+        proc.append(",").append(",").append(",").append(",").append(",").append(","); // Days supply,RX service reference number,DAW product selection code,Refill number,Prescription origin code,Plan reported brand generic code
+        proc.append("01,").append(attributes.getResidence()).append(','); // Pharmacy service type code,Patient residence code
         proc.append(providerString);
         proc.append(totalsString);
 
@@ -650,20 +650,20 @@ public class CPCDSExporter {
           typeOfService = "11";
         }
 
-        proc.append(dateFromTimestamp(procedure.start)).append(',');
-        proc.append(i).append(',');
-        proc.append(procedure.stop != (long) 0 ? dateFromTimestamp(procedure.stop) : "").append(',');
-        proc.append(typeOfService).append(',');
-        proc.append(attributes.getPlaceOfService()).append(',');
-        proc.append(attributes.getRevenueCenterCode()).append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append(attributes.getBenefitPaymentStatus()).append(',');
-        proc.append(attributes.getDenialCode()).append(',');
+        proc.append(dateFromTimestamp(procedure.start)).append(','); // Service (from) date
+        proc.append(i).append(','); // Line number
+        proc.append(procedure.stop != (long) 0 ? dateFromTimestamp(procedure.stop) : "").append(','); // Service to date
+        proc.append(typeOfService).append(','); // Type of service
+        proc.append(attributes.getPlaceOfService()).append(','); // Place of service code
+        proc.append(attributes.getRevenueCenterCode()).append(','); // Revenue center code
+        proc.append("").append(','); // Allowed number of units
+        proc.append("").append(','); // Number of units
+        proc.append("").append(','); // National drug code
+        proc.append("").append(','); // Compound code
+        proc.append("").append(','); // Quantity dispensed
+        proc.append("").append(','); // Quantity qualifier code
+        proc.append(attributes.getBenefitPaymentStatus()).append(','); // Line benefit payment status
+        proc.append(attributes.getDenialCode()).append(','); // Line payment denial code
 
         BigDecimal cost = procedure.getCost();
 
@@ -685,15 +685,15 @@ public class CPCDSExporter {
         proc.append(diagnosisString);
 
         Code procedureCode = procedure.codes.get(0);
-        proc.append(procedureCode.code).append(',');
-        proc.append(clean(procedureCode.display)).append(',');
-        proc.append(dateFromTimestamp(procedure.start)).append(',');
-        proc.append(procedureCodingCode).append(',');
-        proc.append(procedureType).append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append("").append(',');
-        proc.append("").append(NEWLINE);
+        proc.append(procedureCode.code).append(','); // Procedure code
+        proc.append(clean(procedureCode.display)).append(','); // Procedure description
+        proc.append(dateFromTimestamp(procedure.start)).append(','); // Procedure date
+        proc.append(procedureCodingCode).append(','); // Procedure code type
+        proc.append(procedureType).append(','); // Procedure type
+        proc.append("").append(','); // Modifier Code-1
+        proc.append("").append(','); // Modifier Code-2
+        proc.append("").append(','); // Modifier Code-3
+        proc.append("").append(NEWLINE); // Modifier Code-4
 
         s.append(proc.toString());
         i++;
@@ -786,52 +786,52 @@ public class CPCDSExporter {
 
         med.append(adminString);
 
-        med.append(daysSupply).append(',');
-        med.append(rxRef).append(',');
-        med.append(dawCode).append(',');
-        med.append("0").append(',');
-        med.append("0").append(',');
-        med.append(brandGenericCode).append(',');
-        med.append(serviceType).append(',');
-        med.append(attributes.getResidence()).append(',');
+        med.append(daysSupply).append(','); // Days supply
+        med.append(rxRef).append(','); // RX service reference number
+        med.append(dawCode).append(','); // DAW product selection code
+        med.append("0").append(','); // Refill number
+        med.append("0").append(','); // Prescription origin code
+        med.append(brandGenericCode).append(','); // Plan reported brand generic code
+        med.append(serviceType).append(','); // Pharmacy service type code
+        med.append(attributes.getResidence()).append(','); // Patient residence code
 
         med.append(providerString);
         med.append(totalsString);
 
         Code coding = medication.codes.get(0);
 
-        med.append(dateFromTimestamp(medication.start)).append(',');
-        med.append(i).append(',');
-        med.append(medication.stop != (long) 0 ? dateFromTimestamp(medication.stop) : "").append(',');
-        med.append("16").append(',');
-        med.append("01").append(',');
-        med.append(attributes.getRevenueCenterCode()).append(',');
-        med.append(dailyDosage * daysSupply).append(',');
-        med.append(dailyDosage * daysSupply).append(',');
-        med.append(coding.code).append(',');
-        med.append(randomLongWithBounds(0, 2)).append(',');
-        med.append(dailyDosage * daysSupply).append(',');
-        med.append("UN").append(',');
-        med.append(attributes.getBenefitPaymentStatus()).append(',');
-        med.append(attributes.getDenialCode()).append(',');
+        med.append(dateFromTimestamp(medication.start)).append(','); // Service (from) date
+        med.append(i).append(','); // Line number
+        med.append(medication.stop != (long) 0 ? dateFromTimestamp(medication.stop) : "").append(','); // Service to date
+        med.append("16").append(','); // Type of service
+        med.append("01").append(','); // Place of service code
+        med.append(attributes.getRevenueCenterCode()).append(','); // Revenue center code
+        med.append(dailyDosage * daysSupply).append(','); // Allowed number of units
+        med.append(dailyDosage * daysSupply).append(','); //  Number of units
+        med.append(coding.code).append(','); // National drug code
+        med.append(randomLongWithBounds(0, 2)).append(','); // Compound code
+        med.append(dailyDosage * daysSupply).append(','); // Quantity dispensed
+        med.append("UN").append(','); // Quantity qualifier code
+        med.append(attributes.getBenefitPaymentStatus()).append(','); // Line benefit payment status
+        med.append(attributes.getDenialCode()).append(','); // Line payment denial code
 
         BigDecimal cost = medication.getCost();
 
-        med.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(',');
-        med.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(',');
-        med.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(',');
+        med.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); // Line disallowed amount
+        med.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(','); // Line member reimbursement
+        med.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(','); // Line amount paid by patient
         med.append((double) Math.round((dailyDosage == 0 || daysSupply == 0 ? 0 : cost.longValue() / (dailyDosage * daysSupply) * 100) / 100))
-            .append(',');
-        med.append(cost).append(',');
-        med.append(cost).append(',');
-        med.append((double) Math.round(encounter.claim.payer.getDeductible() * 100) / 100).append(',');
-        med.append(cost).append(',');
-        med.append(0.00).append(',');
-        med.append(cost).append(',');
-        med.append(cost).append(',');
-        med.append((double) Math.round((liability/attributes.getLength()) * 100) / 100).append(',');
-        med.append((double) Math.round((copay/attributes.getLength()) * 100) / 100).append(',');
-        med.append(0.00).append(',');
+            .append(','); // Drug cost
+        med.append(cost).append(','); // Line payment amount
+        med.append(cost).append(','); // Line amount paid to provider
+        med.append((double) Math.round(encounter.claim.payer.getDeductible() * 100) / 100).append(','); // Line patient deductible
+        med.append(cost).append(','); // Line primary payer paid amount
+        med.append(0.00).append(','); // Line coinsurance amount
+        med.append(cost).append(','); // Line submitted amount
+        med.append(cost).append(','); // Line allowed amount
+        med.append((double) Math.round((liability/attributes.getLength()) * 100) / 100).append(','); // Line member liability
+        med.append((double) Math.round((copay/attributes.getLength()) * 100) / 100).append(','); // Line copay amount
+        med.append(0.00).append(','); // Line discount amount
 
         med.append(diagnosisString);
         med.append(procedureEMPTY).append(NEWLINE);
@@ -844,8 +844,8 @@ public class CPCDSExporter {
       for (Device device : encounter.devices) {
         StringBuilder dev = new StringBuilder();
         dev.append(adminString);
-        dev.append(",").append(",").append(",").append(",").append(",").append(",");
-        dev.append("01,").append(attributes.getResidence()).append(',');
+        dev.append(",").append(",").append(",").append(",").append(",").append(","); // Days supply,RX service reference number,DAW product selection code,Refill number,Prescription origin code,Plan reported brand generic code
+        dev.append("01,").append(attributes.getResidence()).append(','); // Pharmacy service type code,Patient residence code
         dev.append(providerString);
         dev.append(totalsString);
 
@@ -854,53 +854,53 @@ public class CPCDSExporter {
           typeOfService = "11";
         }
 
-        dev.append(dateFromTimestamp(device.start)).append(',');
-        dev.append(i).append(',');
-        dev.append(device.stop != (long) 0 ? dateFromTimestamp(device.stop) : "").append(',');
-        dev.append(typeOfService).append(',');
-        dev.append(attributes.getPlaceOfService()).append(',');
-        dev.append(attributes.getRevenueCenterCode()).append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append(attributes.getBenefitPaymentStatus()).append(',');
-        dev.append(attributes.getDenialCode()).append(',');
+        dev.append(dateFromTimestamp(device.start)).append(','); // Service (from) date
+        dev.append(i).append(','); // Line number
+        dev.append(device.stop != (long) 0 ? dateFromTimestamp(device.stop) : "").append(','); // Service to date
+        dev.append(typeOfService).append(','); // Type of service
+        dev.append(attributes.getPlaceOfService()).append(','); // Place of service code
+        dev.append(attributes.getRevenueCenterCode()).append(','); // Revenue center code
+        dev.append("").append(','); // Allowed number of units
+        dev.append("").append(','); //  Number of units
+        dev.append("").append(','); // National drug code
+        dev.append("").append(','); // Compound code
+        dev.append("").append(','); // Quantity dispensed
+        dev.append("").append(','); // Quantity qualifier code
+        dev.append(attributes.getBenefitPaymentStatus()).append(','); // Line benefit payment status
+        dev.append(attributes.getDenialCode()).append(','); // Line payment denial code
 
         BigDecimal cost = device.getCost();
 
-        dev.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(',');
-        dev.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(',');
-        dev.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(',');
-        dev.append("").append(',');
-        dev.append(cost).append(',');
-        dev.append(cost).append(',');
-        dev.append((double) Math.round(encounter.claim.payer.getDeductible() * 100) / 100).append(',');
-        dev.append(cost).append(',');
-        dev.append(0.00).append(',');
-        dev.append(cost).append(',');
-        dev.append(cost).append(',');
-        dev.append((double) Math.round((liability/attributes.getLength()) * 100) / 100).append(',');
-        dev.append((double) Math.round((copay/attributes.getLength()) * 100) / 100).append(',');
-        dev.append(0.00).append(',');
+        dev.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); // Line disallowed amount
+        dev.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(','); // Line member reimbursement
+        dev.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(','); // Line amount paid by patient
+        dev.append("").append(','); // Drug cost
+        dev.append(cost).append(','); // Line payment amount
+        dev.append(cost).append(','); // Line amount paid to provider
+        dev.append((double) Math.round(encounter.claim.payer.getDeductible() * 100) / 100).append(','); // Line patient deductible
+        dev.append(cost).append(','); // Line primary payer paid amount
+        dev.append(0.00).append(','); // Line coinsurance amount
+        dev.append(cost).append(','); // Line submitted amount
+        dev.append(cost).append(','); // Line allowed amount
+        dev.append((double) Math.round((liability/attributes.getLength()) * 100) / 100).append(','); // Line member liability
+        dev.append((double) Math.round((copay/attributes.getLength()) * 100) / 100).append(','); // Line copay amount
+        dev.append(0.00).append(','); // Line discount amount
 
         dev.append(diagnosisString);
 
-        String diagnosisCode = "http://snomed.info/sct";
+        String deviceCodeType = "http://snomed.info/sct";
         String deviceType = "";
 
         Code deviceCode = device.codes.get(0);
-        dev.append(deviceCode.code).append(',');
-        dev.append(clean(deviceCode.display)).append(',');
-        dev.append(dateFromTimestamp(device.start)).append(',');
-        dev.append(diagnosisCode).append(',');
-        dev.append(deviceType).append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(',');
-        dev.append("").append(NEWLINE);
+        dev.append(deviceCode.code).append(','); // Procedure code
+        dev.append(clean(deviceCode.display)).append(','); // Procedure description
+        dev.append(dateFromTimestamp(device.start)).append(','); // Procedure date
+        dev.append(deviceCodeType).append(','); // Procedure code type
+        dev.append(deviceType).append(','); // Procedure type
+        dev.append("").append(','); // Modifier Code-1
+        dev.append("").append(','); // Modifier Code-2
+        dev.append("").append(','); // Modifier Code-3
+        dev.append("").append(NEWLINE); // Modifier Code-4
 
         s.append(dev.toString());
         i++;
