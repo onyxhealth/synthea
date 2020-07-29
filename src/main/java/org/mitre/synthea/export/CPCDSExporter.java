@@ -735,49 +735,46 @@ public class CPCDSExporter {
         JsonObject dosage;
         JsonObject duration;
 
-        if (medicationDetails == null || medicationDetails.has("as_needed")) {
-          dailyDosage = 0;
-          daysSupply = 0;
-        } else {
-          if (medicationDetails != null && medicationDetails.has("dosage")) {
-            dosage = medicationDetails.get("dosage").getAsJsonObject();
-            if (dosage.has("amount") == false) {
-              dosage.addProperty("amount", 0);
-            }
-            if (dosage.has("frequency") == false) {
-              dosage.addProperty("frequency", 0);
-            }
-            if (dosage.has("period") == false) {
-              dosage.addProperty("period", 0);
-            }
-            if (dosage.has("unit") == false) {
-              dosage.addProperty("unit", "days");
-            }
-          } else {
-            dosage = new JsonObject();
-            dosage.addProperty("amount", 0);
-            dosage.addProperty("frequency", 0);
-            dosage.addProperty("period", 0);
+        if (medicationDetails != null && medicationDetails.has("dosage")) {
+          dosage = medicationDetails.get("dosage").getAsJsonObject();
+          if (dosage.has("amount") == false) {
+            dosage.addProperty("amount", 1);
+          }
+          if (dosage.has("frequency") == false) {
+            dosage.addProperty("frequency", 1);
+          }
+          if (dosage.has("period") == false) {
+            dosage.addProperty("period", 1);
+          }
+          if (dosage.has("unit") == false) {
             dosage.addProperty("unit", "days");
           }
-          if (medicationDetails != null && medicationDetails.has("duration")) {
-            duration = medicationDetails.get("duration").getAsJsonObject();
-            if (duration.has("quantity") == false) {
-              duration.addProperty("quantity", 0);
-            }
-            if (duration.has("unit") == false) {
-              duration.addProperty("unit", "days");
-            }
-          } else {
-            duration = new JsonObject();
-            duration.addProperty("quantity", 0);
+        } else {
+          dosage = new JsonObject();
+          dosage.addProperty("amount", 1);
+          dosage.addProperty("frequency", 1);
+          dosage.addProperty("period", 1);
+          dosage.addProperty("unit", "days");
+        }
+
+        if (medicationDetails != null && medicationDetails.has("duration")) {
+          duration = medicationDetails.get("duration").getAsJsonObject();
+          if (duration.has("quantity") == false) {
+            duration.addProperty("quantity", randomLongWithBounds(1, 30));
+          }
+          if (duration.has("unit") == false) {
             duration.addProperty("unit", "days");
           }
-
-          dailyDosage = dosage.get("amount").getAsInt() * dosage.get("frequency").getAsInt()
-              * dosage.get("period").getAsInt() * (int) dayMultiplier.get(dosage.get("unit").getAsString());
-          daysSupply = duration.get("quantity").getAsInt() * dayMultiplier.get(duration.get("unit").getAsString());
+        } else {
+          duration = new JsonObject();
+          duration.addProperty("quantity", randomLongWithBounds(1, 30));
+          duration.addProperty("unit", "days");
         }
+
+        dailyDosage = dosage.get("amount").getAsInt() * dosage.get("frequency").getAsInt()
+            * dosage.get("period").getAsInt() * (int) dayMultiplier.get(dosage.get("unit").getAsString());
+        daysSupply = duration.get("quantity").getAsInt() * dayMultiplier.get(duration.get("unit").getAsString());
+
 
         UUID rxRef = UUID.randomUUID();
 
@@ -1060,7 +1057,7 @@ public class CPCDSExporter {
     private String procStatus;
     private String networkStatus;
     private String claimType;
-    private final String admissionTypeCode = "other";
+    private String admissionTypeCode;
     private final String discharge = "home";
     private final String denialCode = "";
     private String benefitPaymentStatus;
@@ -1121,7 +1118,7 @@ public class CPCDSExporter {
         if (encounter.devices.size() > 0 | (encounter.procedures.size() == 0 ? false : encounter.procedures.get(0).codes.get(0).display.contains("(physical object)"))) {
           setClaimType("professional-nonclinician"); // FUTURE new codeset is just professional
         } else {
-          if (this.sourceAdminCode.equals("gp") | this.sourceAdminCode.equals("mp")) { // FUTURE remove this logic.  inpatient and outpatient claims are now all Institiutional
+          if (this.sourceAdminCode.equals("4") | this.sourceAdminCode.equals("6")) { // FUTURE remove this logic.  inpatient and outpatient claims are now all Institiutional
             setClaimType("inpatient-facility");
           } else {
             setClaimType("outpatient-facility");
@@ -1146,10 +1143,12 @@ public class CPCDSExporter {
         }
       }
 
-      if (getSourceAdminCode() == "emd") {
+      if (getSourceAdminCode() == "7") {
         setRevenueCenterCode("0450");
+        setAdmissionTypeCode("1");
       } else {
         setRevenueCenterCode("");
+        setAdmissionTypeCode("3");
       }
 
       setNpiProvider(doctorNPI);
@@ -1194,7 +1193,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerCity() {
-      return payerCity;
+      return this.payerCity;
     }
 
     public void setPayerCity(String payerCity) {
@@ -1202,7 +1201,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerZip() {
-      return payerZip;
+      return this.payerZip;
     }
 
     public void setPayerZip(String payerZip) {
@@ -1210,7 +1209,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerType() {
-      return payerType;
+      return this.payerType;
     }
 
     public void setPayerType(String payerType) {
@@ -1218,7 +1217,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerState() {
-      return payerState;
+      return this.payerState;
     }
 
     public void setPayerState(String payerState) {
@@ -1226,7 +1225,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerPhone() {
-      return payerPhone;
+      return this.payerPhone;
     }
 
     public void setPayerPhone(String payerPhone) {
@@ -1234,7 +1233,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerAddress() {
-      return payerAddress;
+      return this.payerAddress;
     }
 
     public void setPayerAddress(String payerAddress) {
@@ -1242,7 +1241,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerId() {
-      return payerId;
+      return this.payerId;
     }
 
     public void setPayerId(String payerId) {
@@ -1250,7 +1249,7 @@ public class CPCDSExporter {
     }
 
     public String getPayerName() {
-      return payerName;
+      return this.payerName;
     }
 
     public void setPayerName(String payerName) {
@@ -1258,11 +1257,11 @@ public class CPCDSExporter {
     }
 
     public double getTotalClaimCost() {
-      return totalClaimCost;
+      return this.totalClaimCost;
     }
 
     public String getNpiPrescribingProvider() {
-      return npiPrescribingProvider;
+      return this.npiPrescribingProvider;
     }
 
     public void setNpiPrescribingProvider(String npiPrescribingProvider) {
@@ -1277,19 +1276,19 @@ public class CPCDSExporter {
      */
     public void isInpatient(String type) {
       if (type.equals("emergency") || type.equals("ambulatory")) {
-        setSourceAdminCode("emd");
+        setSourceAdminCode("7");
         setBillTypeCode("852");
         setProcStatus("active");
         setNetworkStatus("out");
       } else {
         if (type.equals("inpatient") || type.equals("wellness") || type.equals("urgentcare")) {
-          String[] admCode = {"gp", "mp"};
+          String[] admCode = {"4", "6"};
           setSourceAdminCode(admCode[(int) randomLongWithBounds(0, 1)]);
           setBillTypeCode("112");
           setProcStatus("active");
           setNetworkStatus("in");
         } else {
-          setSourceAdminCode("outp");
+          setSourceAdminCode("9");
           setBillTypeCode("112");
           setProcStatus("active");
           setNetworkStatus("out");
@@ -1302,7 +1301,7 @@ public class CPCDSExporter {
      * @return Provider NPI as String
      */
     public String getNpiProvider() {
-      return npiProvider;
+      return this.npiProvider;
     }
 
     public void setNpiProvider(String npiProvider) {
@@ -1342,7 +1341,7 @@ public class CPCDSExporter {
     }
     
     public String getRevenueCenterCode() {
-      return revenueCenterCode;
+      return this.revenueCenterCode;
     }
 
     public void setRevenueCenterCode(String revenueCenterCode) {
@@ -1350,7 +1349,7 @@ public class CPCDSExporter {
     }
 
     public String getPlaceOfService() {
-      return placeOfService;
+      return this.placeOfService;
     }
 
     public void setPlaceOfService(String placeOfService) {
@@ -1358,11 +1357,11 @@ public class CPCDSExporter {
     }
 
     public String getResidence() {
-      return residence;
+      return this.residence;
     }
 
     public Integer getLength() {
-      return length;
+      return this.length;
     }
 
     public void setLength(Integer length) {
@@ -1378,15 +1377,15 @@ public class CPCDSExporter {
     }
 
     public String getPaymentType() {
-      return paymentType;
+      return this.paymentType;
     }
 
     public String getPayeeType() {
-      return payeeType;
+      return this.payeeType;
     }
 
     public String getBenefitPaymentStatus() {
-      return benefitPaymentStatus;
+      return this.benefitPaymentStatus;
     }
 
     public void setBenefitPaymentStatus(String benefitPaymentStatus) {
@@ -1394,15 +1393,19 @@ public class CPCDSExporter {
     }
 
     public String getDenialCode() {
-      return denialCode;
+      return this.denialCode;
     }
 
     public String getDischarge() {
-      return discharge;
+      return this.discharge;
     }
 
     public String getAdmissionTypeCode() {
-      return admissionTypeCode;
+      return this.admissionTypeCode;
+    }
+
+    public void setAdmissionTypeCode(String code) {
+      this.admissionTypeCode = code;
     }
 
     public String getClaimType() {
