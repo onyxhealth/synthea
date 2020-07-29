@@ -1119,9 +1119,9 @@ public class CPCDSExporter {
         setPrescribingNetworkStatus(getNetworkStatus());
       } else {
         if (encounter.devices.size() > 0 | (encounter.procedures.size() == 0 ? false : encounter.procedures.get(0).codes.get(0).display.contains("(physical object)"))) {
-          setClaimType("professional-nonclinician");
+          setClaimType("professional-nonclinician"); // FUTURE new codeset is just professional
         } else {
-          if (this.sourceAdminCode.equals("gp") | this.sourceAdminCode.equals("mp")) {
+          if (this.sourceAdminCode.equals("gp") | this.sourceAdminCode.equals("mp")) { // FUTURE remove this logic.  inpatient and outpatient claims are now all Institiutional
             setClaimType("inpatient-facility");
           } else {
             setClaimType("outpatient-facility");
@@ -1173,12 +1173,12 @@ public class CPCDSExporter {
       if (Boolean.parseBoolean(Config.get("exporter.cpcds.single_payer"))) {
         setPayerId(clean(Config.get("exporter.cpcds.single_payer.id")));
         setPayerName(clean(Config.get("exporter.cpcds.single_payer.name")));
-        setPayerAddress("7428 MAIN ST");
-        setPayerCity("RICHMOND");
-        setPayerState("VA");
-        setPayerZip("23219");
-        setPayerType("");
-        setPayerPhone("480-605-7962");
+        setPayerAddress(clean(Config.get("exporter.cpcds.single_payer.streetAddress")));
+        setPayerCity(clean(Config.get("exporter.cpcds.single_payer.city")));
+        setPayerState(clean(Config.get("exporter.cpcds.single_payer.state")));
+        setPayerZip(clean(Config.get("exporter.cpcds.single_payer.zip")));
+        setPayerType(clean(Config.get("exporter.cpcds.single_payer.type")));
+        setPayerPhone(clean(Config.get("exporter.cpcds.single_payer.phone")));
       } else {
         setPayerId(payer.uuid.toString());
         setPayerName(payer.getName());
