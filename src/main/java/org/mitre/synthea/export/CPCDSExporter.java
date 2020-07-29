@@ -137,7 +137,7 @@ public class CPCDSExporter {
   private void writeCPCDSHeaders() throws IOException {
     patients.write("Member id,Date of birth,Date of death,Home_County,Home_State,Home_Country,"
         + "Home_Zip code,Bill_County,Bill_State,Bill_Country,Bill_Zip code,"
-        + "Work_County,Work_State,Work_Country,Work_Zip code," + "Race code,Ethnicity,Gender code,Birth sex,Name");
+        + "Work_County,Work_State,Work_Country,Work_Zip code,Race code,Ethnicity,Gender code,Birth sex,Name");
     patients.write(NEWLINE);
 
     coverages.write("Coverage id,Beneficiary id,Subscriber id,Dependent number,Coverage type,"
@@ -148,7 +148,7 @@ public class CPCDSExporter {
     String cpcdsClaimColumnHeaders = "Claim service start date,Claim service end date,"
         + "Claim paid date,Claim received date,Member admission date,Member discharge date,"
         + "Patient account number,Medical record number,Claim unique identifier,"
-        + "Claim adjusted from identifier,Claim adjusted to identifier," + "Claim diagnosis related group,"
+        + "Claim adjusted from identifier,Claim adjusted to identifier,Claim diagnosis related group,"
         + "Claim source inpatient admission code,Claim inpatient admission type code,"
         + "Claim bill facility type code,Claim service classification type code,"
         + "Claim frequency code,Claim processing status code,Claim type,"
@@ -167,7 +167,7 @@ public class CPCDSExporter {
         + "Claim disallowed amount,Member paid deductible,Co-insurance liability amount,"
         + "Copay amount,Member liability,Claim primary payer paid amount,Claim discount amount,"
         + "Service (from) date,Line number,Service to date,Type of service,Place of service code,"
-        + "Revenue center code,Allowed number of units,Number of units,National drug code," + "Compound code,"
+        + "Revenue center code,Allowed number of units,Number of units,National drug code,Compound code,"
         + "Quantity dispensed,Quantity qualifier code,Line benefit payment status,"
         + "Line payment denial code,Line disallowed amount,Line member reimbursement,"
         + "Line amount paid by patient,Drug cost,Line payment amount,Line amount paid to provider,"
@@ -448,12 +448,12 @@ public class CPCDSExporter {
 
     while (i <= attributes.getLength()) {
       // admin
-      String adminStart = "";
-      String adminEnd = "";
+      String admitStart = "";
+      String admitEnd = "";
 
       if (attributes.getClaimType() == "inpatient-facility") {
-        adminStart = dateFromTimestamp(encounter.start);
-        adminEnd = dateFromTimestamp(encounter.stop);
+        admitStart = dateFromTimestamp(encounter.start);
+        admitEnd = dateFromTimestamp(encounter.stop);
       }
 
       String billType = attributes.getBillTypeCode();
@@ -461,8 +461,8 @@ public class CPCDSExporter {
           String.valueOf(dateFromTimestamp(encounter.stop)), // Claim service end date
           String.valueOf(dateFromTimestamp(encounter.stop)), // Claim paid date
           String.valueOf(dateFromTimestamp(encounter.start)), // Claim received date
-          String.valueOf(adminStart), // Member admission date
-          String.valueOf(adminEnd), // Member discharge date
+          String.valueOf(admitStart), // Member admission date
+          String.valueOf(admitEnd), // Member discharge date
           personID.toString(), // Patient account number
           medRecordNumber.toString(), // Medical record nuimber
           encounterID, // Claim unique identifier
@@ -575,15 +575,29 @@ public class CPCDSExporter {
       StringBuilder diagnosis = new StringBuilder();
       int diagnosisCount = 0;
 
+      if (encounter.conditions.size() == 0) {
+        StringBuilder cond = new StringBuilder();
+        cond.append("261665006").append(','); // Diagnosis Code
+        cond.append("Unknown").append(','); // Description
+        cond.append("Y").append(','); // Present on admission
+        cond.append("http://snomed.info/sct").append(','); // Diagnosis code type
+        cond.append("principal").append(','); // Diagnosis type
+        cond.append("").append(','); // Is E-code
+
+        
+        for (int l = diagnosisCount; l <= 4; l++) {
+          diagnosis.append(",,,,,,"); 
+        }
+      } else {
       for (Entry condition : encounter.conditions) {
         if (diagnosisCount < 5) {
           StringBuilder cond = new StringBuilder();
           String presentOnAdmission;
 
-          String[] poaCodes = { "Y", "N", "U", "W" };
+          String[] poaCodes = { "y", "n", "u", "w" }; 
           presentOnAdmission = poaCodes[(int) randomLongWithBounds(0, 3)];
           Code coding = condition.codes.get(0);
-          String diagnosisCode = "SNOMED";
+          String diagnosisCode = "http://snomed.info/sct";
           String diagnosisType = "";
           if (diagnosisCount == 0) {
             diagnosisType = "principal";
@@ -609,13 +623,14 @@ public class CPCDSExporter {
       for (int l = diagnosisCount; l <= 4; l++) {
         diagnosis.append(",,,,,,");
       }
+    }
 
       String diagnosisString = diagnosis.toString();
 
       // procedures
       int k = 0;
       for (Procedure procedure : encounter.procedures) {
-        String procedureCodingCode = "SNOMED";
+        String procedureCodingCode = "http://snomed.info/sct";
         String procedureType;
         if (k == 0) {
           procedureType = "primary";
@@ -704,7 +719,7 @@ public class CPCDSExporter {
         /*
          * {"dosage": {"amount":1,"frequency":2,"period":1,"unit":"days"},
          * "duration":{"quantity":2,"unit":"weeks"}, "instructions":[ {
-         * "system":"SNOMED-CT", "code":"code", "display":"display string"} ] }
+         * "system":"http://snomed.info/sct-CT", "code":"code", "display":"display string"} ] }
          */
 
         JsonObject medicationDetails = medication.prescriptionDetails;
@@ -873,7 +888,7 @@ public class CPCDSExporter {
 
         dev.append(diagnosisString);
 
-        String diagnosisCode = "SNOMED";
+        String diagnosisCode = "http://snomed.info/sct";
         String deviceType = "";
 
         Code deviceCode = device.codes.get(0);
