@@ -190,7 +190,7 @@ public class CPCDSExporter {
     hospitals.write("Id,Name,Address,City,State,ZIP,Phone,Type");
     hospitals.write(NEWLINE);
 
-    practitioners.write("Practitioner NPI,Name,Organization NPI,Code,Specialty");
+    practitioners.write("Provider NPI,Provider name,Organization NPI,Code,Specialty,Last updated");
     practitioners.write(NEWLINE);
   }
 
@@ -935,7 +935,8 @@ public class CPCDSExporter {
       s.append(providerName).append(','); // Name
       s.append(clean(organizationNPI)).append(','); // Organization NPI
       s.append("provider").append(','); // Code
-      s.append(clean(specialty)).append(NEWLINE); // Specialty
+      s.append(clean(specialty)).append(','); // Specialty
+      s.append(clean(dateFromTimestamp(System.currentTimeMillis()))).append(NEWLINE); // Last Updated
 
       write(s.toString(), practitioners);
     }
