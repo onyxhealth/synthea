@@ -135,9 +135,11 @@ public class CPCDSExporter {
    * @throws IOException if any IO error occurs
    */
   private void writeCPCDSHeaders() throws IOException {
-    patients.write("Member id,Date of birth,Date of death,Home_County,Home_State,Home_Country,"
-        + "Home_Zip code,Bill_County,Bill_State,Bill_Country,Bill_Zip code,"
-        + "Work_County,Work_State,Work_Country,Work_Zip code,Race code,Ethnicity,Gender code,Birth sex,Name");
+    patients.write("Member id,Date of birth,Deceased,Date of death,"
+        + "Home street address,Home county,Home state,Home country,Home zip code,"
+        + "Bill street address,Bill county,Bill state,Bill country,Bill zip code,"
+        + "Work street address,Work county,Work state,Work country,Work zip code,"
+        + "Race code,Ethnicity,Gender code,Birth sex,Patient name,Member demographics last updated date");
     patients.write(NEWLINE);
 
     coverages.write("Coverage id,Beneficiary id,Subscriber id,Dependent number,Coverage type,"
@@ -313,28 +315,32 @@ public class CPCDSExporter {
     s.append(personID).append(','); // Member id
     s.append(dateFromTimestamp((long) person.attributes.get(Person.BIRTHDATE))).append(','); // Date of Birth
     if (!person.alive(time)) {
+      s.append("True,");
       s.append(dateFromTimestamp((long) person.attributes.get(Person.DEATHDATE))).append(','); // Date of Death
     } else {
-      s.append(',');
+      s.append("False,,");
     }
-    s.append(person.attributes.getOrDefault("county", "")).append(','); // Home_County
-    s.append(person.attributes.getOrDefault(Person.STATE, "")).append(','); // Home_State
-    s.append(person.attributes.getOrDefault("country", "United States")).append(','); // Home_Country
-    s.append(person.attributes.getOrDefault(Person.ZIP, "")).append(','); // Home_Zip code
+    s.append(person.attributes.getOrDefault("address", "")).append(','); // Home street address
+    s.append(person.attributes.getOrDefault("county", "")).append(','); // Home county
+    s.append(person.attributes.getOrDefault(Person.STATE, "")).append(','); // Home state
+    s.append(person.attributes.getOrDefault("country", "United States")).append(','); // Home country
+    s.append(person.attributes.getOrDefault(Person.ZIP, "")).append(','); // Home zip code
 
-    s.append(person.attributes.getOrDefault("county", "")).append(','); // Bill_County
-    s.append(person.attributes.getOrDefault(Person.STATE, "")).append(','); // Bill_State
-    s.append(person.attributes.getOrDefault("country", "United States")).append(','); // Bill_Country
-    s.append(person.attributes.getOrDefault(Person.ZIP, "")).append(','); // Bill_Zip code
+    s.append(person.attributes.getOrDefault("address", "")).append(','); // Bill street address
+    s.append(person.attributes.getOrDefault("county", "")).append(','); // Bill county
+    s.append(person.attributes.getOrDefault(Person.STATE, "")).append(','); // Bill state
+    s.append(person.attributes.getOrDefault("country", "United States")).append(','); // Bill country
+    s.append(person.attributes.getOrDefault(Person.ZIP, "")).append(','); // Bill zip code
 
-    s.append(",,,,"); // Work_County, Work_State, Work_Country, Work_Zip code
+    s.append(",,,,,"); // Work street address, Work county, Work state, Work country, Work zip code
 
     s.append(clean(raceEthnicityCodes.get(person.attributes.getOrDefault(Person.RACE, "")).toString())).append(','); // Race code
     s.append(clean(raceEthnicityCodes.get(person.attributes.getOrDefault(Person.ETHNICITY, "")).toString())).append(','); // Ethnicity
     s.append(clean(person.attributes.getOrDefault(Person.GENDER, "").toString())).append(','); // Gender code
     s.append(clean(person.attributes.getOrDefault(Person.GENDER, "").toString())).append(','); // Birth sex
-    s.append(clean(person.attributes.getOrDefault(Person.NAME, "").toString())).append(NEWLINE); // Name
+    s.append(clean(person.attributes.getOrDefault(Person.NAME, "").toString())).append(','); // Patient name
 
+    s.append(clean(dateFromTimestamp(System.currentTimeMillis()))).append(NEWLINE);
     write(s.toString(), patients);
 
     return personID;
@@ -453,13 +459,13 @@ public class CPCDSExporter {
 
       if (attributes.getClaimType() == "inpatient-facility") {
         admitStart = dateFromTimestamp(encounter.start);
-        admitEnd = dateFromTimestamp(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "");
+        admitEnd = (encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "");
       }
 
       String billType = attributes.getBillTypeCode();
       String[] adminSection = { String.valueOf(dateFromTimestamp(encounter.start)), // Claim service start date
-          String.valueOf(dateFromTimestamp(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "")), // Claim service end date
-          String.valueOf(dateFromTimestamp(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "")), // Claim paid date
+          String.valueOf(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : ""), // Claim service end date
+          String.valueOf(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : ""), // Claim paid date
           String.valueOf(dateFromTimestamp(encounter.start)), // Claim received date
           String.valueOf(admitStart), // Member admission date
           String.valueOf(admitEnd), // Member discharge date
