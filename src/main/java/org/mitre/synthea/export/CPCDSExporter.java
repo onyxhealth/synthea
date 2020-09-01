@@ -453,13 +453,13 @@ public class CPCDSExporter {
 
       if (attributes.getClaimType() == "inpatient-facility") {
         admitStart = dateFromTimestamp(encounter.start);
-        admitEnd = dateFromTimestamp(encounter.stop);
+        admitEnd = dateFromTimestamp(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "");
       }
 
       String billType = attributes.getBillTypeCode();
       String[] adminSection = { String.valueOf(dateFromTimestamp(encounter.start)), // Claim service start date
-          String.valueOf(dateFromTimestamp(encounter.stop)), // Claim service end date
-          String.valueOf(dateFromTimestamp(encounter.stop)), // Claim paid date
+          String.valueOf(dateFromTimestamp(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "")), // Claim service end date
+          String.valueOf(dateFromTimestamp(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "")), // Claim paid date
           String.valueOf(dateFromTimestamp(encounter.start)), // Claim received date
           String.valueOf(admitStart), // Member admission date
           String.valueOf(admitEnd), // Member discharge date
