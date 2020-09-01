@@ -142,9 +142,9 @@ public class CPCDSExporter {
         + "Race code,Ethnicity,Gender code,Birth sex,Patient name,Member demographics last updated date");
     patients.write(NEWLINE);
 
-    coverages.write("Coverage id,Beneficiary id,Subscriber id,Dependent number,Coverage type,"
+    coverages.write("Coverage id,Member id,Subscriber id,Dependent number,Coverage type,"
         + "Coverage status,Start date,End date,Group id,Group name,Plan identifier,"
-        + "Plan name,Payer identifier,Payer primary identifier,Relationship to subscriber");
+        + "Plan name,Claim payer identifier,Relationship to subscriber");
     coverages.write(NEWLINE);
 
     String cpcdsClaimColumnHeaders = "Claim service start date,Claim service end date,"
@@ -388,8 +388,7 @@ public class CPCDSExporter {
         s.append(groupName).append(','); // Group name
         s.append(planId).append(','); // Plan identifier
         s.append(name).append(','); // Plan name
-        s.append(payerId).append(','); // Payer identifier
-        s.append(payerId).append(','); // Payer primary identifier
+        s.append(payerId).append(','); // Claim payer identifier
         s.append("self"); // Relationship to subscriber
         s.append(NEWLINE);
         write(s.toString(), coverages);
