@@ -110,7 +110,7 @@ public class CPCDSExporter {
       File coverageFile = outputDirectory.resolve("CPCDS_Coverages.csv").toFile();
       File claimsFile = outputDirectory.resolve("CPCDS_Claims.csv").toFile();
       File hospitalFile = outputDirectory.resolve("Organizations.csv").toFile();
-      File practitionerFile = outputDirectory.resolve("PractitionerRoles.csv").toFile();
+      File practitionerFile = outputDirectory.resolve("Practitioners.csv").toFile();
 
       coverages = new FileWriter(coverageFile, append);
       patients = new FileWriter(patientsFile, append);
@@ -147,12 +147,12 @@ public class CPCDSExporter {
         + "Plan name,Claim payer identifier,Relationship to subscriber");
     coverages.write(NEWLINE);
 
-    String cpcdsClaimColumnHeaders = "Claim service start date,Claim service end date,"
+    String cpcdsClaimColumnHeaders = "Claim service start date,Claim service end date,Statement from date,Statement through date,"
         + "Claim paid date,Claim received date,Member admission date,Member discharge date,"
-        + "Patient account number,Medical record number,Claim unique identifier,"
+        + "Patient account number,Medical record number,Payer claim unique identifier,"
         + "Claim adjusted from identifier,Claim adjusted to identifier,Claim diagnosis related group,"
         + "Claim source inpatient admission code,Claim inpatient admission type code,"
-        + "Claim bill facility type code,Claim service classification type code,"
+        + "Claim type of bill code,Claim service classification type code,"
         + "Claim frequency code,Claim processing status code,Claim type,"
         + "Patient discharge status code,Claim payment denial code,Claim primary payer identifier,"
         + "Claim payee type code,Claim payee,Claim payment status code,Claim payer identifier,"
@@ -163,23 +163,23 @@ public class CPCDSExporter {
         + "Claim site of service NPI,Claim site of service network status,"
         + "Claim referring provider NPI,Claim referring provider network status,"
         + "Claim performing provider NPI,Claim performing provider network status,"
-        + "Claim prescribing provider NPI,Claim prescribing provider network status,Claim PCP NPI,"
+        + "Claim prescribing physician NPI,Claim prescribing provider network status,Claim PCP NPI,"
         + "Claim total submitted amount,Claim total allowed amount,Amount paid by patient,"
         + "Claim amount paid to provider,Member reimbursement,Claim payment amount,"
-        + "Claim disallowed amount,Member paid deductible,Co-insurance liability amount,"
+        + "Claim noncovered amount,Member paid deductible,Co-insurance liability amount,"
         + "Copay amount,Member liability,Claim primary payer paid amount,Claim discount amount,"
-        + "Service (from) date,Line number,Service to date,Type of service,Place of service code,"
+        + "Line number,Service (from) date,Service to date,Type of service,Place of service code,"
         + "Revenue center code,Allowed number of units,Number of units,National drug code,Compound code,"
         + "Quantity dispensed,Quantity qualifier code,Line benefit payment status,"
-        + "Line payment denial code,Line disallowed amount,Line member reimbursement,"
+        + "Line payment denial code,Line noncovered amount,Line member reimbursement,"
         + "Line amount paid by patient,Drug cost,Line payment amount,Line amount paid to provider,"
         + "Line patient deductible,Line primary payer paid amount,Line coinsurance amount,"
         + "Line submitted amount,Line allowed amount,Line member liability,Line copay amount,"
-        + "Line discount amount,Diagnosis code - 1,Diagnosis description - 1,Present on admission - 1,"
-        + "Diagnosis code type - 1,Diagnosis type - 1,Is E code - 1,Diagnosis code - 2,Diagnosis description - 2,Present on admission - 2,"
-        + "Diagnosis code type - 2,Diagnosis type - 2,Is E code - 2,Diagnosis code - 3,Diagnosis description - 3,Present on admission - 3,"
-        + "Diagnosis code type - 3,Diagnosis type - 3,Is E code - 3,Diagnosis code - 4,Diagnosis description - 4,Present on admission - 4,"
-        + "Diagnosis code type - 4,Diagnosis type - 4,Is E code - 4,Diagnosis code - 5,Diagnosis description - 5,Present on admission - 5,"
+        + "Line discount amount,Diagnosis code - 1,Diagnosis code description - 1,Present on admission - 1,"
+        + "Diagnosis code type - 1,Diagnosis type - 1,Is E code - 1,Diagnosis code - 2,Diagnosis code description - 2,Present on admission - 2,"
+        + "Diagnosis code type - 2,Diagnosis type - 2,Is E code - 2,Diagnosis code - 3,Diagnosis code description - 3,Present on admission - 3,"
+        + "Diagnosis code type - 3,Diagnosis type - 3,Is E code - 3,Diagnosis code - 4,Diagnosis code description - 4,Present on admission - 4,"
+        + "Diagnosis code type - 4,Diagnosis type - 4,Is E code - 4,Diagnosis code - 5,Diagnosis code description - 5,Present on admission - 5,"
         + "Diagnosis code type - 5,Diagnosis type - 5,Is E code - 5,Procedure code,Procedure description,"
         + "Procedure date,Procedure code type,Procedure type,Modifier Code-1,Modifier Code-2,"
         + "Modifier Code-3,Modifier Code-4";
@@ -187,10 +187,10 @@ public class CPCDSExporter {
     claims.write(cpcdsClaimColumnHeaders);
     claims.write(NEWLINE);
 
-    hospitals.write("Id,Name,Address,City,State,ZIP,Phone,Type");
+    hospitals.write("Organization NPI,Service facility NPI,Service facility name,Service facility address,Service facility city,Service facility state,Service facility zip,Claim billing provider name,Claim payer name,Payer identifier,Last updated");
     hospitals.write(NEWLINE);
 
-    practitioners.write("Provider NPI,Provider name,Organization NPI,Code,Specialty,Last updated");
+    practitioners.write("Provider NPI,Provider name,Organization NPI,Code,Provider Taxonomy,Last updated");
     practitioners.write(NEWLINE);
   }
 
@@ -455,15 +455,23 @@ public class CPCDSExporter {
       // admin
       String admitStart = "";
       String admitEnd = "";
+      String statementStart = "";
+      String statementEnd = "";
 
-      if (attributes.getClaimType() == "inpatient-facility") {
+      if (attributes.getClaimType() == "Inpatient Facility") {
         admitStart = dateFromTimestamp(encounter.start);
         admitEnd = (encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "");
+      }
+      if (attributes.getClaimType() != "Pharmacy") {
+        statementStart = dateFromTimestamp(encounter.start);
+        statementEnd = encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : "";
       }
 
       String billType = attributes.getBillTypeCode();
       String[] adminSection = { String.valueOf(dateFromTimestamp(encounter.start)), // Claim service start date
           String.valueOf(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : ""), // Claim service end date
+          String.valueOf(statementStart), // Statement from date
+          String.valueOf(statementEnd), // Statement through date
           String.valueOf(encounter.stop != (long) 0 ? dateFromTimestamp(encounter.stop) : ""), // Claim paid date
           String.valueOf(dateFromTimestamp(encounter.start)), // Claim received date
           String.valueOf(admitStart), // Member admission date
@@ -476,7 +484,7 @@ public class CPCDSExporter {
           "", // Claim diagnosis related group
           attributes.getSourceAdminCode(), // Claim source inpatient admission code
           attributes.getAdmissionTypeCode(), // Claim inpatient admission type code
-          Character.toString(billType.charAt(0)), // Claim bill facility type code
+          Character.toString(billType.charAt(0)), // Claim type of bill code
           Character.toString(billType.charAt(1)), // Claim service classification type code
           Character.toString(billType.charAt(2)), // Claim frequency code
           attributes.getProcStatus(), // Claim processing status code
@@ -510,7 +518,7 @@ public class CPCDSExporter {
           attributes.getNetworkStatus(), // Claim referring provider network status
           attributes.getNpiProvider(), // Claim performing provider NPI
           attributes.getNetworkStatus(), // Claim performing provider network status
-          attributes.getNpiPrescribingProvider(), // Claim prescribing provider NPI
+          attributes.getNpiPrescribingProvider(), // Claim prescribing physician NPI
           attributes.getPrescribingNetworkStatus(), // Claim prescribing provider network status
           attributes.getNpiProvider() // Claim PCP NPI
       };
@@ -557,7 +565,7 @@ public class CPCDSExporter {
           String.valueOf(toProvider), // Claim amount paid to provider
           String.valueOf(memberReimbursement), // Member reimbursement
           String.valueOf(paymentAmount), // Claim payment amount
-          String.valueOf(disallowed), // Claim disallowed amount
+          String.valueOf(disallowed), // Claim noncovered amount
           String.valueOf(deductible), // Member paid deductible
           String.valueOf(""), // Co-insurance liability amount
           String.valueOf(copay), // Copay amount
@@ -616,7 +624,7 @@ public class CPCDSExporter {
             }
           }
           cond.append(coding.code).append(','); // Diagnosis code
-          cond.append(clean(coding.display)).append(','); // Diagnosis description
+          cond.append(clean(coding.display)).append(','); // Diagnosis code description
           cond.append(presentOnAdmission).append(','); // Present on admission
           cond.append(diagnosisCode).append(','); // Diagnosis code type
           cond.append(diagnosisType).append(','); // Diagnosis type
@@ -655,8 +663,8 @@ public class CPCDSExporter {
           typeOfService = "11";
         }
 
-        proc.append(dateFromTimestamp(procedure.start)).append(','); // Service (from) date
         proc.append(i).append(','); // Line number
+        proc.append(dateFromTimestamp(procedure.start)).append(','); // Service (from) date
         proc.append(procedure.stop != (long) 0 ? dateFromTimestamp(procedure.stop) : "").append(','); // Service to date
         proc.append(typeOfService).append(','); // Type of service
         proc.append(attributes.getPlaceOfService()).append(','); // Place of service code
@@ -672,7 +680,7 @@ public class CPCDSExporter {
 
         BigDecimal cost = procedure.getCost();
 
-        proc.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); //Line disallowed amount
+        proc.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); //Line noncovered amount
         proc.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(','); //Line member reimbursement
         proc.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(','); // Line amount paid by patient
         proc.append("").append(','); // Drug cost
@@ -802,8 +810,8 @@ public class CPCDSExporter {
 
         Code coding = medication.codes.get(0);
 
-        med.append(dateFromTimestamp(medication.start)).append(','); // Service (from) date
         med.append(i).append(','); // Line number
+        med.append(dateFromTimestamp(medication.start)).append(','); // Service (from) date
         med.append(medication.stop != (long) 0 ? dateFromTimestamp(medication.stop) : "").append(','); // Service to date
         med.append("16").append(','); // Type of service
         med.append("01").append(','); // Place of service code
@@ -819,7 +827,7 @@ public class CPCDSExporter {
 
         BigDecimal cost = medication.getCost();
 
-        med.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); // Line disallowed amount
+        med.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); // Line noncovered amount
         med.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(','); // Line member reimbursement
         med.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(','); // Line amount paid by patient
         med.append((double) Math.round((dailyDosage == 0 || daysSupply == 0 ? 0 : cost.longValue() / (dailyDosage * daysSupply) * 100) / 100))
@@ -856,8 +864,8 @@ public class CPCDSExporter {
           typeOfService = "11";
         }
 
-        dev.append(dateFromTimestamp(device.start)).append(','); // Service (from) date
         dev.append(i).append(','); // Line number
+        dev.append(dateFromTimestamp(device.start)).append(','); // Service (from) date
         dev.append(device.stop != (long) 0 ? dateFromTimestamp(device.stop) : "").append(','); // Service to date
         dev.append(typeOfService).append(','); // Type of service
         dev.append(attributes.getPlaceOfService()).append(','); // Place of service code
@@ -873,7 +881,7 @@ public class CPCDSExporter {
 
         BigDecimal cost = device.getCost();
 
-        dev.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); // Line disallowed amount
+        dev.append((double) Math.round((disallowed/attributes.getLength()) * 100) / 100).append(','); // Line noncovered amount
         dev.append((double) Math.round((memberReimbursement/attributes.getLength()) * 100) / 100).append(','); // Line member reimbursement
         dev.append((double) Math.round((patientPaid/attributes.getLength()) * 100) / 100).append(','); // Line amount paid by patient
         dev.append("").append(','); // Drug cost
@@ -935,7 +943,7 @@ public class CPCDSExporter {
       s.append(providerName).append(','); // Name
       s.append(clean(organizationNPI)).append(','); // Organization NPI
       s.append("provider").append(','); // Code
-      s.append(clean(specialty)).append(','); // Specialty
+      s.append(clean(specialty)).append(','); // Provider Taxonomy
       s.append(clean(dateFromTimestamp(System.currentTimeMillis()))).append(NEWLINE); // Last Updated
 
       write(s.toString(), practitioners);
@@ -975,8 +983,9 @@ public class CPCDSExporter {
     }
   }
 
+
   /**
-   * Write data for hospitals to csv file.
+   * Write data for Payer to Organizations csv file.
    * 
    * @param encounter  the encounter
    * @param attributes the attributes
@@ -1086,6 +1095,7 @@ public class CPCDSExporter {
     private String payerType;
     private String payerZip;
     private String prescribingNetworkStatus = "";
+    private String billProviderName;
 
     /**
      * Constructor. Takes the encounter and processes relevant encounters based on
@@ -1115,19 +1125,20 @@ public class CPCDSExporter {
         overwrittenNPIs.put(doctorNPI, newPractitionerID);
         doctorNPI = newPractitionerID;
       }
+      billProviderName = encounter.clinician.getFullname();
 
       if (encounter.medications.size() != 0 && encounter.procedures.size() == 0) {
-        setClaimType("pharmacy");
+        setClaimType("Pharmacy");
         setNpiPrescribingProvider(doctorNPI);
         setPrescribingNetworkStatus(getNetworkStatus());
       } else {
         if (encounter.devices.size() > 0 | (encounter.procedures.size() == 0 ? false : encounter.procedures.get(0).codes.get(0).display.contains("(physical object)"))) {
-          setClaimType("professional-nonclinician"); // FUTURE new codeset is just professional
+          setClaimType("Professional");
         } else {
           if (this.sourceAdminCode.equals("4") | this.sourceAdminCode.equals("6")) { // FUTURE remove this logic.  inpatient and outpatient claims are now all Institiutional
-            setClaimType("inpatient-facility");
+            setClaimType("Inpatient Facility");
           } else {
-            setClaimType("outpatient-facility");
+            setClaimType("Outpatient Facility");
           }
         }
         setNpiPrescribingProvider("");
@@ -1196,6 +1207,10 @@ public class CPCDSExporter {
       }
 
       
+    }
+
+    public String getBillProviderName() {
+      return this.billProviderName;
     }
 
     public String getPayerCity() {
