@@ -187,7 +187,7 @@ public class CPCDSExporter {
     claims.write(cpcdsClaimColumnHeaders);
     claims.write(NEWLINE);
 
-    hospitals.write("Organization NPI,Service facility NPI,Service facility name,Service facility address,Service facility city,Service facility state,Service facility zip,Claim billing provider name,Claim payer name,Payer identifier,Last updated");
+    hospitals.write("Id,Name,Address,City,State,ZIP,Phone,Type,Ownership");
     hospitals.write(NEWLINE);
 
     practitioners.write("Provider NPI,Provider name,Organization NPI,Code,Provider Taxonomy,Last updated");
@@ -399,35 +399,32 @@ public class CPCDSExporter {
       personCoverage.put(year, coverageID);
       coverageLookup.put(personID, personCoverage);
 
-      StringBuilder s = new StringBuilder();
-      s.append(coverageID).append(','); // Coverage id
-      s.append(personID).append(','); // Member id
-      s.append(personID).append(','); // Subscriber id
-      s.append('0').append(','); // Dependent number
-      s.append(type).append(','); // Coverage type
-  
-      // Coverage status
-      if (year != "2020") {
-        s.append("inactive").append(',');
-      } else {
-        s.append("active").append(',');
-      }
-  
-      s.append(year + "-01-01").append(','); // Start date
-      if (year != "2020") {
-        s.append(year + "-12-31"); // End date
-      }
-  
-      s.append(',');
-      s.append(groupId).append(','); // Group id
-      s.append(groupName).append(','); // Group name
-      s.append(planId).append(','); // Plan identifier
-      s.append(name).append(','); // Plan name
-      s.append(payerId).append(','); // Payer identifier
-      s.append(payerId).append(','); // Payer primary identifier
-      s.append("self"); // Relationship to subscriber
-      s.append(NEWLINE);
-      write(s.toString(), coverages);
+      personCoverage.put(year, coverageID);
+        StringBuilder s = new StringBuilder();
+        s.append(coverageID).append(','); // Coverage id
+        s.append(personID).append(','); // Member id
+        s.append(personID).append(','); // Subscriber id
+        s.append('0').append(','); // Dependent number
+        s.append(type).append(','); // Coverage type
+    
+        // Coverage status
+        if (year.equals("2020")) {
+          s.append("active").append(',');
+        } else {
+          s.append("inactive").append(',');
+        }
+    
+        s.append(year + "-01-01").append(','); // Start date
+        s.append(year + "-12-31").append(','); // End date
+        
+        s.append(groupId).append(','); // Group id
+        s.append(groupName).append(','); // Group name
+        s.append(planId).append(','); // Plan identifier
+        s.append(name).append(','); // Plan name
+        s.append(payerId).append(','); // Claim payer identifier
+        s.append("self"); // Relationship to subscriber
+        s.append(NEWLINE);
+        write(s.toString(), coverages);
     }
     return coverageID;
   }
@@ -960,7 +957,6 @@ public class CPCDSExporter {
    */
   private void organization(Encounter encounter, CPCDSAttributes attributes, String payerName) throws IOException {
     StringBuilder s = new StringBuilder();
-    // Id,Name,Address,City,State,ZIP,Phone,Type,Ownership
 
     Boolean continueFlag = true;
     if (exportedHospitals.contains(attributes.getServiceSiteNPI())) {
@@ -994,7 +990,6 @@ public class CPCDSExporter {
    */
   private void payer(CPCDSAttributes attributes) throws IOException {
     StringBuilder s = new StringBuilder();
-    // Id,Name,Address,City,State,ZIP,Phone,Type,Ownership
 
     Boolean continueFlag = true;
     if (exportedHospitals.contains(attributes.getPayerId())) {
